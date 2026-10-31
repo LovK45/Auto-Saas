@@ -68,3 +68,10 @@ The Business Timeline derives a chronological activity view from existing local 
 ## Campaign performance reporting
 
 Campaign performance stores manually entered reporting snapshots on each local campaign: impressions, clicks, conversions, ad spend, recorded revenue, and a source/period note. The dashboard calculates click-through rate, conversion rate, cost per conversion and return on ad spend, plus aggregate totals and CSV export. Values are user-entered and are not imported from ad networks, analytics providers or payment processors. Recorded revenue is not verified payment data. This module does not claim attribution accuracy and does not count general affiliate clicks as campaign clicks. Performance snapshots are included in campaign objects in the existing manual workspace backup.
+
+
+## First-party UTM lead attribution
+
+The lead form has a separate, unchecked attribution-consent control; it is distinct from permission to store/contact the person. When the operator confirms that separate consent, a new lead can retain the first-touch UTM source, medium, campaign, content and term values from the current browser session. The first-touch values are held in session storage and are not refreshed on subsequent tagged page visits in that session. The Campaign Performance view groups consented attributed leads by source/medium/campaign. These are lead counts only, not purchases or verified revenue. No fingerprinting, third-party analytics tags, cross-device stitching or ad-network import is performed. Attribution is available only when the visitor arrives with UTM parameters and the lead is entered in the same browser session. Existing leads are not retroactively attributed. UTM values are user-controlled and can be inaccurate. The workspace remains browser-local until the user manually backs up to Supabase; lead attribution fields are included in that snapshot because they are part of each lead record.
+
+The left feature navigation is independently scrollable on desktop and mobile; the workspace footer remains visible while the feature list scrolls.
