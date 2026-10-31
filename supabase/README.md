@@ -192,3 +192,8 @@ The email is sent only for paid sessions and includes product details, amount, a
 Apply the updated `migrations/20261031_purchase_email_notifications.sql` (it adds owner/workspace ownership and retry-attempt fields), then redeploy the updated webhook and deploy `manage-purchase-emails` with `supabase functions deploy manage-purchase-emails`. The function requires `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_BASE_URL`, `RESEND_API_KEY`, and `PURCHASE_EMAIL_FROM`.
 
 The Products & Sales screen includes a seller-only notification panel. It loads notification rows through a JWT-verified Edge Function, not direct browser table access. Sellers can retry pending/failed confirmation messages. Before sending, the function verifies the seller owns the notification and that the related purchase is recorded as paid or partially refunded. Each retry uses a distinct provider idempotency key and records attempt count, timestamp, provider message ID, and outcome. The function does not retry already-sent messages. This is a manual retry control, not a background queue or automatic retry scheduler; review Resend delivery events/bounces separately.
+
+
+## Checkout success return page
+
+Both the public storefront and authenticated Checkout creation now return buyers to `/checkout-success.html` with Stripe's Checkout Session ID. This page deliberately says the payment is being verified: a successful browser redirect is not proof of payment. Buyers can continue to the dashboard, where the session ID is prefilled for the existing secure download verification flow, or sign in and refresh the purchase library. The Stripe webhook remains the source of truth for paid status and entitlements.
