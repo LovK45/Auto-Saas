@@ -15,7 +15,7 @@ Deno.serve(async (req: Request) => {
  if(error || !p) return reply({error:"This product is unavailable"},404);
  if(req.method==="GET") return reply({product:{name:p.product_name || "Digital product",description:p.product_description || "",available:true}});
  try {
-  const session=await stripe.checkout.sessions.create({mode:"payment",line_items:[{price:p.stripe_price_id,quantity:1}],metadata:{owner_id:p.owner_id,workspace_id:p.workspace_id,product_key:p.product_key},success_url:base+"/?checkout=success&session_id={CHECKOUT_SESSION_ID}",cancel_url:base+"/storefront.html?key="+encodeURIComponent(key)+"&checkout=cancelled"});
+  const session=await stripe.checkout.sessions.create({mode:"payment",line_items:[{price:p.stripe_price_id,quantity:1}],metadata:{owner_id:p.owner_id,workspace_id:p.workspace_id,product_key:p.product_key},success_url:base+"/checkout-success.html?session_id={CHECKOUT_SESSION_ID}",cancel_url:base+"/storefront.html?key="+encodeURIComponent(key)+"&checkout=cancelled"});
   if(!session.url) return reply({error:"Stripe did not return a checkout URL"},502);
   return reply({checkout_url:session.url});
  } catch(e) { console.error("Public checkout failed",e); return reply({error:"Unable to start checkout"},502); }
