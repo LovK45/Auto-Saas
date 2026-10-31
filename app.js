@@ -109,6 +109,33 @@ async function refreshSales(){
  }catch(error){status.textContent='Could not load';$('purchaseList').className='list empty';$('purchaseList').textContent='Sales could not be loaded: '+(error?.message||'Unknown error')+' · Apply both Stripe migrations and confirm the purchases owner-read policy.';note('Verified sales could not be refreshed.')}
 }
 $('refreshSales').onclick=refreshSales;
+async function refreshCustomerLibrary(){
+ const status=$('customerLibraryStatus'),listEl=$('customerLibraryList');
+ if(!sb||!activeUser){status.textContent='Sign in required';listEl.className='list empty';listEl.textContent='Sign in using the email used at Stripe Checkout.';return}
+ status.textContent='Loading your purchases…';listEl.className='list empty';listEl.textContent='Loading…';
+ try{
+  const {data,error}=await sb.functions.invoke('my-library',{method:'GET'});
+  if(error)throw error;
+  const rows=data?.purchases||[];
+  if(!rows.length){status.textContent='No configured product deliveries found for '+activeUser.email+'.';listEl.className='list empty';listEl.textContent='Paid purchases appear here after the seller configures a private delivery file.';return}
+  status.textContent=rows.length+' purchase record(s) found for '+activeUser.email+'.';
+  listEl.className='list';
+  listEl.innerHTML=rows.map(p=>{
+   const date=p.paid_at||p.created_at,amount=moneyMinor(Number(p.amount_total||0),p.currency||'usd');
+   const canDownload=p.entitlement_status==='active'&&p.payment_status==='paid';
+   return '<div class="stackitem"><div><b>Product '+esc(p.product_key)+'</b><small>'+esc(amount)+' · '+esc(p.payment_status)+' · '+esc(date?new Date(date).toLocaleDateString():'Date unavailable')+'</small><small>Access: '+esc(p.entitlement_status)+'</small></div><button '+(canDownload?'data-library-download="'+esc(p.checkout_session_id)+'"':'disabled')+'>'+(canDownload?'Download':'Unavailable')+'</button></div>';
+  }).join('');
+ }catch(error){status.textContent=error?.message||'Could not load your library.';listEl.className='list empty';listEl.textContent='Purchase history could not be loaded.'}
+}
+$('refreshLibrary').onclick=refreshCustomerLibrary;
+$('customerLibraryList').addEventListener('click',async event=>{
+ const button=event.target.closest('[data-library-download]');if(!button)return;
+ const id=button.getAttribute('data-library-download');button.disabled=true;
+ try{const {data,error}=await sb.functions.invoke('get-download',{body:{checkout_session_id:id}});if(error)throw error;if(!data?.download_url)throw new Error('No download URL returned.');window.open(data.download_url,'_blank','noopener');note('Private download link issued. It expires in 90 seconds.')}
+ catch(error){note(error?.message||'Download could not be verified.')}
+ finally{button.disabled=false}
+});
+
 $('getDelivery').onclick=async()=>{
  const sessionId=$('deliverySessionId').value.trim();
  if(!sb||!activeUser)return note('Sign in with the purchasing email first.');
