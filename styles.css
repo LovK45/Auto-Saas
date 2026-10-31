@@ -5,3 +5,5 @@
 .muted{color:var(--muted);font-size:12px;line-height:1.6}.emailpanel{margin-top:16px}#sequenceList{margin-top:14px}.stackitem .secondary{padding:6px 9px;font-size:11px}
 
 .workflow-step{border-left:2px solid var(--accent);padding-left:12px}.emailpanel .notice{margin-top:12px}.stackitem span{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.stackitem button{white-space:nowrap}
+
+.task-row,.notification-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.task-main{min-width:0}.task-row small,.notification-row small{display:block;color:var(--muted);margin-top:5px}.task-done .task-main>b{text-decoration:line-through;opacity:.65}.notification-row.is-read{opacity:.58}.task-row>span,.notification-row>span{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.task-row button,.notification-row button{white-space:nowrap}
