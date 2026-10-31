@@ -130,3 +130,18 @@ The frontend is not yet wired to call this function, and the static local produc
 The Products & Sales screen now loads the authenticated owner's purchase ledger from Supabase after sign-in and refresh. It displays verified paid order count, gross amount, refunded amount, net paid amount, and the latest 250 purchase records with customer email, product key, payment state, amounts, and timestamps. Totals are grouped by currency rather than incorrectly adding unlike currencies together.
 
 The screen can create the owner's first workspace if needed, display the workspace/owner IDs for trusted product-catalog setup, and invoke the authenticated `create-checkout` Edge Function for a local catalog item. The local item's numeric ID is used as its `product_key`; a matching active `stripe_products` row and Stripe Price ID must be inserted by an administrator. Checkout remains unavailable until both functions, both migrations, secrets, and Stripe webhook configuration are deployed. The dashboard is not live until Supabase is configured and the user signs in. No customer entitlement or digital delivery is automatically provisioned.
+
+
+## Private customer digital delivery
+
+The `purchase_entitlements` migration adds a private `customer-deliveries` Storage bucket and server-only entitlement records. Configure each active `stripe_products` row with `delivery_bucket='customer-deliveries'` and a `delivery_path` matching an object uploaded to that private bucket. Apply `migrations/20261031_purchase_entitlements.sql` after the product catalog and verified-purchases migrations.
+
+Deploy the updated webhook and the new customer download function:
+- `supabase functions deploy stripe-webhook --no-verify-jwt`
+- `supabase functions deploy get-download`
+
+The Checkout function no longer pre-fills the seller's email or marks the seller as the buyer. Stripe Checkout collects the actual customer's email. The signed webhook records that email and creates an active entitlement only when Stripe reports the session paid and a private delivery object is configured. A full refund revokes access; a partial refund currently suspends access pending seller review.
+
+Customers create/sign in to an app account using the same email used at Checkout, enter the Checkout Session ID returned in the success URL, and request a signed private Storage URL. The Edge Function verifies the Supabase JWT and exact email match, checks the active entitlement, and issues a 90-second signed URL. The app does not expose the private bucket or service-role key. This flow is not an email-based magic-link system; the customer must have an account and know their Checkout Session ID.
+
+The seller must upload files privately and configure the matching bucket/path. This app currently supports one delivery object per product. No email delivery, automatic account provisioning, license keys, subscription entitlements, or partial-refund prorating is included. Test with Stripe test mode and a test customer account before production.
