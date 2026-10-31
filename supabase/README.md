@@ -174,3 +174,14 @@ The public endpoint is intentionally callable without a user JWT and uses an ung
 ## Passwordless customer sign-in
 
 The shared authentication panel now supports a passwordless email sign-in link using Supabase Auth `signInWithOtp` with `shouldCreateUser: false`. Customers must already have an account and should enter the same email used at Stripe Checkout. Configure Supabase Auth's Site URL and allowed redirect URLs to include the deployed static app origin. Configure an email provider/template in Supabase; link delivery and inbox behavior depend on that external configuration. The browser never receives a service-role key. The existing library and download Edge Functions still derive the verified email from the authenticated Supabase JWT and check the paid entitlement before issuing a short-lived signed URL.
+
+
+## Automated buyer purchase confirmations
+
+The signed Stripe webhook can send a transactional purchase-confirmation email through Resend after Stripe reports a paid Checkout Session. Apply `migrations/20261031_purchase_email_notifications.sql` before deploying the updated webhook. Set these Edge Function secrets in Supabase:
+
+- `RESEND_API_KEY`: private Resend API key
+- `PURCHASE_EMAIL_FROM`: verified sender, for example `Your Store <orders@yourdomain.com>`
+- `APP_BASE_URL`: exact HTTPS origin of the deployed app (also used by checkout redirects)
+
+The email is sent only for paid sessions and includes product details, amount, and a link to the app's customer library. The buyer must register/sign in with the same email used at checkout; this notification does not create accounts or attach files. Resend receives an idempotency key based on the Checkout Session ID. Notification status is stored in a service-role-only table; missing provider configuration leaves the notification pending, and provider errors are recorded as failed without rolling back a verified purchase. Review delivery, sender-domain verification, and provider logs in Resend before production use. This integration has not been deployed or tested against live accounts.
