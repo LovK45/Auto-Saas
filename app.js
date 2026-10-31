@@ -84,7 +84,8 @@ async function ensureSalesWorkspace(){
  if(createError)throw createError;
  activeWorkspaceId=created.id;return activeWorkspaceId;
 }
-function moneyMinor(amount,currency){return new Intl.NumberFormat(undefined,{style:'currency',currency:(currency||'usd').toUpperCase()}).format((Number(amount)||0)/100)}
+function moneyMinor(amount,currency){const code=(currency||'usd').toUpperCase();return new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'code'}).format((Number(amount)||0)/100)}
+function moneyByCurrency(rows,field){const totals=new Map();rows.forEach(row=>{const code=(row.currency||'usd').toUpperCase();totals.set(code,(totals.get(code)||0)+Number(row[field]||0))});return totals.size?[...totals].sort((a,b)=>a[0].localeCompare(b[0])).map(([code,total])=>moneyMinor(total,code)).join(' · '):moneyMinor(0,'usd')}
 async function refreshSales(){
  const status=$('salesStatus');
  if(!sb||!activeUser){status.textContent='Sign in required';$('purchaseList').className='list empty';$('purchaseList').textContent='Connect Supabase and sign in to see verified purchase records.';$('salesOrders').textContent=$('salesGross').textContent=$('salesRefunded').textContent=$('salesNet').textContent='—';$('salesWorkspace').textContent='Your secure workspace ID appears after you sign in and refresh sales.';return}
@@ -95,11 +96,13 @@ async function refreshSales(){
   const {data,error}=await sb.from('purchases').select('id,stripe_checkout_session_id,stripe_payment_intent_id,product_key,customer_email,amount_total,amount_refunded,currency,payment_status,created_at,paid_at,refunded_at').eq('owner_id',activeUser.id).order('created_at',{ascending:false}).limit(250);
   if(error)throw error;
   const rows=data||[],paid=rows.filter(x=>x.payment_status==='paid'||x.payment_status==='partially_refunded'||x.payment_status==='refunded');
-  const gross=paid.reduce((n,x)=>n+Number(x.amount_total||0),0),refunded=paid.reduce((n,x)=>n+Number(x.amount_refunded||0),0);
+  const grossByCurrency=paid.reduce((totals,x)=>{const code=(x.currency||'usd').toUpperCase();totals[code]=(totals[code]||0)+Number(x.amount_total||0);return totals},{});
+  const refundedByCurrency=paid.reduce((totals,x)=>{const code=(x.currency||'usd').toUpperCase();totals[code]=(totals[code]||0)+Number(x.amount_refunded||0);return totals},{});
+  const netRows=paid.map(x=>({...x,amount_total:Math.max(0,Number(x.amount_total||0)-Number(x.amount_refunded||0))}));
   $('salesOrders').textContent=paid.length.toLocaleString();
-  $('salesGross').textContent=moneyMinor(gross,paid[0]?.currency||'usd');
-  $('salesRefunded').textContent=moneyMinor(refunded,paid[0]?.currency||'usd');
-  $('salesNet').textContent=moneyMinor(gross-refunded,paid[0]?.currency||'usd');
+  $('salesGross').textContent=moneyByCurrency(paid,'amount_total');
+  $('salesRefunded').textContent=moneyByCurrency(paid,'amount_refunded');
+  $('salesNet').textContent=moneyByCurrency(netRows,'amount_total');
   $('purchaseList').className='list'+(rows.length?'':' empty');
   $('purchaseList').innerHTML=rows.length?rows.map(x=>'<div class="stackitem"><div><b>'+esc(x.customer_email||'Customer email unavailable')+'</b><small>'+esc(x.product_key)+' · '+esc(x.payment_status.replace(/_/g,' '))+'</small><small>'+moneyMinor(x.amount_total,x.currency)+' gross · '+moneyMinor(x.amount_refunded,x.currency)+' refunded · '+esc(new Date(x.paid_at||x.created_at).toLocaleString())+'</small><small>Session: '+esc(x.stripe_checkout_session_id)+'</small></div><span class="tag">'+esc(x.payment_status)+'</span></div>').join(''):'No Stripe purchase events have been recorded yet.';
   status.textContent='Updated · '+rows.length+' records';
