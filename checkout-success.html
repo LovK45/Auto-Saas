@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Your checkout return and next steps.">
+<title>Checkout received · Autopilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+<style>
+body{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 15% 10%,#30265b 0,transparent 35%),#0b0c14;color:#f7f5ff}
+.success-card{width:min(650px,100%);padding:clamp(28px,6vw,58px);border:1px solid #ffffff20;border-radius:28px;background:#171725ef;box-shadow:0 30px 100px #0008}
+.success-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:18px;background:#8c72df26;color:#c9b8ff;font-size:28px}
+.eyebrow{margin-top:28px;color:#c9b8ff;letter-spacing:.16em;font-weight:700;font-size:12px}
+h1{font:700 clamp(30px,7vw,46px) 'Space Grotesk';margin:12px 0}
+p,li{color:#c5c2d4;line-height:1.7}
+ol{padding-left:22px;margin:22px 0}
+.actions{display:grid;gap:12px;margin-top:28px}
+.actions a{display:block;text-align:center;text-decoration:none;padding:14px 18px;border-radius:12px;font-weight:700}
+.primary-link{background:linear-gradient(120deg,#9c82f2,#6d59ce);color:white}
+.secondary-link{border:1px solid #ffffff2b;color:#eee9ff}
+.session{overflow-wrap:anywhere;font-size:12px;color:#9893ad;background:#ffffff08;padding:12px;border-radius:10px}
+</style>
+</head>
+<body>
+<main class="success-card">
+<div class="success-mark" aria-hidden="true">✓</div>
+<div class="eyebrow">AUTOPILOT · CHECKOUT RETURN</div>
+<h1>Thanks — we’ve received your checkout return.</h1>
+<p>Your payment is being verified securely. Access is only activated after Stripe confirms the payment and our webhook records it. This can take a short moment, so this page does not treat the redirect itself as proof of payment.</p>
+<ol>
+<li>Open your customer account or sign in using the same email address you entered at checkout.</li>
+<li>Go to <strong>Products & Sales → My purchased products</strong> and refresh your library.</li>
+<li>If your item is not visible yet, wait briefly and refresh again. If it remains missing, contact the seller with the checkout session reference below.</li>
+</ol>
+<p id="session" class="session">Preparing your secure checkout reference…</p>
+<div class="actions">
+<a id="accountLink" class="primary-link" href="./">Continue to your account &amp; library →</a>
+<a class="secondary-link" href="./storefront.html">Return to the storefront</a>
+</div>
+</main>
+<script>
+(function(){
+ const params=new URLSearchParams(location.search);
+ const session=params.get('session_id')||'';
+ const valid=/^cs_(test|live)_[A-Za-z0-9]+$/.test(session);
+ const ref=document.getElementById('session');
+ const link=document.getElementById('accountLink');
+ if(valid){
+   ref.textContent='Checkout reference: '+session;
+   link.href='./?checkout=success&session_id='+encodeURIComponent(session)+'#products';
+ }else{
+   ref.textContent='No valid checkout reference was included. You can still sign in and refresh your purchase library.';
+   link.href='./#products';
+ }
+})();
+</script>
+</body>
+</html>
