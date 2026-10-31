@@ -108,6 +108,23 @@ async function refreshSales(){
   status.textContent='Updated · '+rows.length+' records';
  }catch(error){status.textContent='Could not load';$('purchaseList').className='list empty';$('purchaseList').textContent='Sales could not be loaded: '+(error?.message||'Unknown error')+' · Apply both Stripe migrations and confirm the purchases owner-read policy.';note('Verified sales could not be refreshed.')}
 }
+
+$('deliveryProductForms').onclick=async event=>{
+ const button=event.target.closest('[data-save-delivery]');if(!button)return;
+ if(!sb||!activeUser)return note('Sign in as the seller first.');
+ const key=button.dataset.saveDelivery,field=(attr)=>$('deliveryProductForms').querySelector('['+attr+'="'+CSS.escape(key)+'"]');
+ const name=field('data-delivery-name')?.value.trim()||'',description=field('data-delivery-description')?.value.trim()||'',path=field('data-delivery-path')?.value.trim()||'';
+ if(!path)return note('Enter the private Storage object path.');
+ button.disabled=true;
+ try{
+  const workspaceId=await ensureSalesWorkspace();$('deliveryWorkspace').value=workspaceId;
+  const {data,error}=await sb.functions.invoke('configure-delivery',{body:{workspace_id:workspaceId,product_key:String(key),storage_path:path,product_name:name,product_description:description}});
+  if(error)throw error;if(!data?.saved)throw new Error(data?.error||'Delivery setup was not saved.');
+  note('Private delivery configuration saved for '+name+'.');
+ }catch(error){note('Could not save delivery setup: '+(error?.message||'Check deployment and product catalog.'))}
+ finally{button.disabled=false}
+};
+
 $('refreshSales').onclick=refreshSales;
 async function refreshCustomerLibrary(){
  const status=$('customerLibraryStatus'),listEl=$('customerLibraryList');
@@ -156,7 +173,9 @@ const checkoutResult=new URLSearchParams(location.search).get('checkout');
 if(checkoutResult==='success')note('Checkout returned successfully. Sign in with your purchase email and verify access below.');
 else if(checkoutResult==='cancelled')note('Checkout was cancelled. No purchase access was granted.');
 
-function renderCommerce(){list('funnelList',s.funnels||[],'No funnel plans yet.',f=>'<div class="stackitem"><div><b>'+esc(f.name)+'</b><small>'+esc(f.type)+' · '+esc(f.offer)+' · '+esc(f.audience)+'</small><small><a href="'+esc(f.url)+'" target="_blank" rel="noopener">Open CTA destination ↗</a></small></div><button data-del-funnel="'+f.id+'" aria-label="Delete funnel">✕</button></div>');list('productList',s.products||[],'No products added yet.',p=>'<div class="stackitem"><div><b>'+esc(p.name)+'</b><small>'+esc(p.currency)+' '+Number(p.price).toFixed(2)+' · '+esc(p.description)+'</small><small>Checkout product key: <code>'+esc(String(p.id))+'</code></small>'+(p.paymentUrl?'<small><a href="'+esc(p.paymentUrl)+'" target="_blank" rel="noopener">Open external payment link ↗</a></small>':'<small>No external payment link attached</small>')+'<button class="secondary" data-checkout-product="'+esc(p.id)+'">Create secure checkout ↗</button></div><button data-del-product="'+p.id+'" aria-label="Delete product">✕</button></div>')}
+function renderCommerce(){
+ if($('deliveryProductForms'))$('deliveryProductForms').innerHTML=(s.products||[]).map(p=>'<div class="stackitem"><div><b>'+esc(p.name)+'</b><small>Product key: <code>'+esc(String(p.id))+'</code></small><label>Product display name<input data-delivery-name="'+esc(p.id)+'" value="'+esc(p.name)+'" maxlength="120"></label><label>Customer description<input data-delivery-description="'+esc(p.id)+'" value="'+esc(p.description||'')+'" maxlength="500"></label><label>Private file path<input data-delivery-path="'+esc(p.id)+'" placeholder="folder/product-file.pdf"></label><button class="secondary" data-save-delivery="'+esc(p.id)+'">Save private delivery setup</button></div></div>').join('')||'No local products to configure.';
+list('funnelList',s.funnels||[],'No funnel plans yet.',f=>'<div class="stackitem"><div><b>'+esc(f.name)+'</b><small>'+esc(f.type)+' · '+esc(f.offer)+' · '+esc(f.audience)+'</small><small><a href="'+esc(f.url)+'" target="_blank" rel="noopener">Open CTA destination ↗</a></small></div><button data-del-funnel="'+f.id+'" aria-label="Delete funnel">✕</button></div>');list('productList',s.products||[],'No products added yet.',p=>'<div class="stackitem"><div><b>'+esc(p.name)+'</b><small>'+esc(p.currency)+' '+Number(p.price).toFixed(2)+' · '+esc(p.description)+'</small><small>Checkout product key: <code>'+esc(String(p.id))+'</code></small>'+(p.paymentUrl?'<small><a href="'+esc(p.paymentUrl)+'" target="_blank" rel="noopener">Open external payment link ↗</a></small>':'<small>No external payment link attached</small>')+'<button class="secondary" data-checkout-product="'+esc(p.id)+'">Create secure checkout ↗</button></div><button data-del-product="'+p.id+'" aria-label="Delete product">✕</button></div>')}
 $('createFunnel').onclick=()=>{const name=$('fName').value.trim(),offer=$('fOffer').value.trim(),url=$('fUrl').value.trim();if(!name||!offer||!url)return note('Enter a funnel name, offer and CTA destination.');try{if(new URL(url).protocol!=='https:')throw 0}catch{return note('Use a valid HTTPS CTA destination.')}s.funnels=s.funnels||[];s.funnels.unshift({id:Date.now(),name,offer,audience:$('fAudience').value.trim(),url,type:$('fType').value,createdAt:new Date().toISOString()});save();renderCommerce();log('Created funnel plan: '+name);$('fName').value='';$('fOffer').value='';$('fUrl').value='';note('Funnel plan saved.')};
 $('funnelList').onclick=e=>{const b=e.target.closest('[data-del-funnel]');if(b){s.funnels=s.funnels.filter(x=>String(x.id)!==b.dataset.delFunnel);save();renderCommerce();log('Deleted funnel plan')}};
 $('addProduct').onclick=()=>{const name=$('prodName').value.trim(),price=Number($('prodPrice').value),paymentUrl=$('prodPay').value.trim();if(!name||$('prodPrice').value===''||!Number.isFinite(price)||price<0)return note('Enter a product name and valid non-negative price.');if(paymentUrl){try{if(new URL(paymentUrl).protocol!=='https:')throw 0}catch{return note('Payment links must use HTTPS.')}}s.products=s.products||[];s.products.unshift({id:Date.now(),name,description:$('prodDesc').value.trim(),price,currency:$('prodCurrency').value,paymentUrl,createdAt:new Date().toISOString()});save();renderCommerce();log('Added product: '+name);$('prodName').value='';$('prodDesc').value='';$('prodPrice').value='';$('prodPay').value='';note('Product saved to your local catalog.')};
