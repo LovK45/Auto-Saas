@@ -157,3 +157,15 @@ Deploy `my-library` with `supabase functions deploy my-library`. It requires the
 Apply `migrations/20261031_product_delivery_metadata.sql` after the purchase-entitlements migration. Deploy `configure-delivery` with `supabase functions deploy configure-delivery`. The seller-side form sends the authenticated seller's workspace, local product key, display name, description, and private Storage object path. The Edge Function independently verifies the seller JWT and requires a matching active `stripe_products` row owned by that seller/workspace before updating the server-managed delivery fields. The bucket is fixed to `customer-deliveries`; the browser cannot choose a public bucket.
 
 Upload the file first to the private bucket, then configure the exact object path in Products & Sales. The matching Stripe product row must already exist. Product display names/descriptions are saved in the server catalog for use in buyer-facing order history. This form does not upload file bytes or create Stripe catalog entries.
+
+
+## Shareable public product checkout
+
+The storefront is a separate static page at `storefront.html`. Apply `migrations/20261031_public_checkout_keys.sql` after the product catalog migration; each Stripe catalog row receives an opaque, unique public checkout key. Deploy:
+
+- `supabase functions deploy public-checkout --no-verify-jwt` (public endpoint; the opaque key identifies an active product, and all price/owner/workspace metadata is read from the server catalog)
+- `supabase functions deploy seller-products` (JWT-protected seller endpoint that returns the seller's shareable URLs)
+
+Set `APP_BASE_URL` to the exact HTTPS origin where the static app and `storefront.html` are hosted. In `storefront-config.js`, set the public Supabase project URL and public anon key; never put a service-role key or Stripe secret there. The storefront uses that public configuration to read product details and start checkout. The seller signs in, opens Products & Sales, and selects **Generate / refresh public checkout links** to copy buyer URLs. The endpoint accepts no client-supplied amount, Stripe Price ID, owner ID, workspace ID, or redirect URL. Apply the existing webhook setup so paid checkout events create purchase records and delivery entitlements.
+
+The public endpoint is intentionally callable without a user JWT and uses an unguessable UUID key, but this is not a complete anti-abuse system: add rate limiting, bot protection/CAPTCHA, monitoring and operational alerts before broad public promotion. The storefront does not expose a file until the signed webhook records a paid purchase and a customer account matches the checkout email. The buyer still needs to create/sign in to an account to access the purchase library; no email magic-link or automated delivery email is included.
