@@ -23,7 +23,7 @@ Deno.serve(async (req: Request) => {
   if (authError || !email) return json({ error: "Valid customer sign-in is required" }, 401);
 
   const { data: entitlements, error: entError } = await db.from("purchase_entitlements")
-    .select("stripe_checkout_session_id, product_key, entitlement_status, created_at")
+    .select("stripe_checkout_session_id, product_key, product_name, product_description, entitlement_status, created_at")
     .eq("customer_email", email)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -41,6 +41,8 @@ Deno.serve(async (req: Request) => {
     return {
       checkout_session_id: item.stripe_checkout_session_id,
       product_key: item.product_key,
+      product_name: item.product_name ?? item.product_key,
+      product_description: item.product_description ?? "",
       entitlement_status: item.entitlement_status,
       created_at: item.created_at,
       payment_status: purchase?.payment_status ?? "unknown",
