@@ -43,3 +43,11 @@ No provider is live merely because this folder exists. Use Stripe test mode and 
 ## Local workflow event bridge
 
 Enabled workflows now listen to two supported browser-local events: creation of a permission-confirmed lead and addition of a contact tag. Conditions are evaluated against that contact. Zero-delay actions can add a contact tag, create a local follow-up task, create a local email draft, record workspace activity, or create a local admin notification. These actions run only in the active browser session and are not a distributed automation service. Steps with a configured delay are recorded as pending and are not executed because there is no scheduler. Purchase and campaign triggers remain design-only until trusted server-side event sources are integrated. The browser must not be treated as a secure source of payment events.
+
+
+## Tasks and notification inbox
+
+- The Tasks & Alerts workspace view supports local task creation, optional CRM contact association, due dates, priority, notes, completion/reopening, filtering and deletion.
+- The notification inbox supports unread counts, mark-one-read, mark-all-read and clearing read or individual alerts.
+- Tasks and notifications created by enabled local workflow actions appear in these views. Records remain browser-local and are included in manual workspace snapshots; they are not cross-device synchronized except through manual snapshot backup/restore.
+- Due-date overdue counts use the browser's current date. No background reminders or push notifications are scheduled.
