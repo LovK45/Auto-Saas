@@ -23,3 +23,10 @@ The Connections screen loads the Supabase JS v2 browser client and supports emai
 - Add an email delivery provider and social publishing APIs only after consent, unsubscribe, account authorization, and provider review flows are implemented.
 
 No provider is live merely because this folder exists. Use Stripe test mode and verify webhook events before accepting real payments. Traffic and revenue are not guaranteed.
+
+
+## Current CRM and email sequence scope
+
+- The browser-local CRM supports contact search, status filtering, tag filtering, editable status/tags/internal notes, and CSV export of those fields.
+- The sequence planner saves a trigger label and up to two drafted email steps with a configured delay. It is a planning tool only: there is no enrollment engine, scheduler, delivery provider, unsubscribe processor, or send tracking yet.
+- CRM records and sequence plans are included in manual workspace snapshot backups. This is not automatic row-level cloud sync.
