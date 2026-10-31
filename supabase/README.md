@@ -185,3 +185,10 @@ The signed Stripe webhook can send a transactional purchase-confirmation email t
 - `APP_BASE_URL`: exact HTTPS origin of the deployed app (also used by checkout redirects)
 
 The email is sent only for paid sessions and includes product details, amount, and a link to the app's customer library. The buyer must register/sign in with the same email used at checkout; this notification does not create accounts or attach files. Resend receives an idempotency key based on the Checkout Session ID. Notification status is stored in a service-role-only table; missing provider configuration leaves the notification pending, and provider errors are recorded as failed without rolling back a verified purchase. Review delivery, sender-domain verification, and provider logs in Resend before production use. This integration has not been deployed or tested against live accounts.
+
+
+## Seller purchase-email delivery monitoring and retry
+
+Apply the updated `migrations/20261031_purchase_email_notifications.sql` (it adds owner/workspace ownership and retry-attempt fields), then redeploy the updated webhook and deploy `manage-purchase-emails` with `supabase functions deploy manage-purchase-emails`. The function requires `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_BASE_URL`, `RESEND_API_KEY`, and `PURCHASE_EMAIL_FROM`.
+
+The Products & Sales screen includes a seller-only notification panel. It loads notification rows through a JWT-verified Edge Function, not direct browser table access. Sellers can retry pending/failed confirmation messages. Before sending, the function verifies the seller owns the notification and that the related purchase is recorded as paid or partially refunded. Each retry uses a distinct provider idempotency key and records attempt count, timestamp, provider message ID, and outcome. The function does not retry already-sent messages. This is a manual retry control, not a background queue or automatic retry scheduler; review Resend delivery events/bounces separately.
