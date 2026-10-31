@@ -63,3 +63,8 @@ Enabled workflows now listen to two supported browser-local events: creation of 
 ## Unified business timeline
 
 The Business Timeline derives a chronological activity view from existing local activity records, lead creation timestamps, task creation/completion timestamps, content calendar creation timestamps, notifications and workflow history. It supports category filtering, text search and CSV export. It does not create a separate audit database, guarantee immutable audit history, or add events retroactively where source records lack timestamps. It remains browser-local and is included in the existing manual workspace snapshot through its source records.
+
+
+## Campaign performance reporting
+
+Campaign performance stores manually entered reporting snapshots on each local campaign: impressions, clicks, conversions, ad spend, recorded revenue, and a source/period note. The dashboard calculates click-through rate, conversion rate, cost per conversion and return on ad spend, plus aggregate totals and CSV export. Values are user-entered and are not imported from ad networks, analytics providers or payment processors. Recorded revenue is not verified payment data. This module does not claim attribution accuracy and does not count general affiliate clicks as campaign clicks. Performance snapshots are included in campaign objects in the existing manual workspace backup.
