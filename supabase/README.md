@@ -145,3 +145,8 @@ The Checkout function no longer pre-fills the seller's email or marks the seller
 Customers create/sign in to an app account using the same email used at Checkout, enter the Checkout Session ID returned in the success URL, and request a signed private Storage URL. The Edge Function verifies the Supabase JWT and exact email match, checks the active entitlement, and issues a 90-second signed URL. The app does not expose the private bucket or service-role key. This flow is not an email-based magic-link system; the customer must have an account and know their Checkout Session ID.
 
 The seller must upload files privately and configure the matching bucket/path. This app currently supports one delivery object per product. No email delivery, automatic account provisioning, license keys, subscription entitlements, or partial-refund prorating is included. Test with Stripe test mode and a test customer account before production.
+
+
+## Customer purchase library
+
+Deploy `my-library` with `supabase functions deploy my-library`. It requires the same Supabase environment secrets as `get-download`. It validates the caller's Supabase JWT, derives the customer email from the verified user record (never from request input), and returns only purchase/entitlement rows associated with that email. The customer library in Products & Sales shows product key, payment state, amount, date, and access state; active paid rows can request a short-lived private download URL through `get-download`. A purchase without a configured delivery object will not appear until an entitlement is created by the webhook.
