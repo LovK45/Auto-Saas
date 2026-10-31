@@ -50,7 +50,7 @@ ol{padding-left:22px;margin:22px 0}
  const link=document.getElementById('accountLink');
  if(valid){
    ref.textContent='Checkout reference: '+session;
-   link.href='./?checkout=success&session_id='+encodeURIComponent(session)+'#products';
+   link.href='./?checkout=success&session_id='+encodeURIComponent(session);
  }else{
    ref.textContent='No valid checkout reference was included. You can still sign in and refresh your purchase library.';
    link.href='./#products';
