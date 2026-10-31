@@ -103,7 +103,7 @@ Deno.serve(async (req: Request) => {
       // Create/revoke delivery entitlement only for a paid session with a verified buyer email
       // and an explicitly configured private Storage object on the server-managed product record.
       const { data: deliveryProduct, error: deliveryLookupError } = await db.from("stripe_products")
-        .select("delivery_bucket, delivery_path")
+        .select("delivery_bucket, delivery_path, product_name, product_description")
         .eq("workspace_id", workspaceId).eq("owner_id", ownerId).eq("product_key", productKey)
         .eq("active", true).maybeSingle();
       if (deliveryLookupError) throw deliveryLookupError;
@@ -113,6 +113,8 @@ Deno.serve(async (req: Request) => {
           owner_id: ownerId,
           workspace_id: workspaceId,
           product_key: productKey,
+          product_name: deliveryProduct.product_name ?? productKey,
+          product_description: deliveryProduct.product_description ?? "",
           customer_email: buyerEmail,
           storage_bucket: deliveryProduct.delivery_bucket,
           storage_path: deliveryProduct.delivery_path,
