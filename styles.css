@@ -3,3 +3,5 @@
 #funnelList a,#productList a{font-size:11px;color:#bdafff}.automation-grid{margin-top:8px}.panel .notice{margin-bottom:0}.stackitem{min-width:0}.stackitem>div{min-width:0;overflow-wrap:anywhere}.stackitem button{flex-shrink:0}
 
 .muted{color:var(--muted);font-size:12px;line-height:1.6}.emailpanel{margin-top:16px}#sequenceList{margin-top:14px}.stackitem .secondary{padding:6px 9px;font-size:11px}
+
+.workflow-step{border-left:2px solid var(--accent);padding-left:12px}.emailpanel .notice{margin-top:12px}.stackitem span{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.stackitem button{white-space:nowrap}
