@@ -150,3 +150,10 @@ The seller must upload files privately and configure the matching bucket/path. T
 ## Customer purchase library
 
 Deploy `my-library` with `supabase functions deploy my-library`. It requires the same Supabase environment secrets as `get-download`. It validates the caller's Supabase JWT, derives the customer email from the verified user record (never from request input), and returns only purchase/entitlement rows associated with that email. The customer library in Products & Sales shows product key, payment state, amount, date, and access state; active paid rows can request a short-lived private download URL through `get-download`. A purchase without a configured delivery object will not appear until an entitlement is created by the webhook.
+
+
+## Seller-managed product delivery configuration
+
+Apply `migrations/20261031_product_delivery_metadata.sql` after the purchase-entitlements migration. Deploy `configure-delivery` with `supabase functions deploy configure-delivery`. The seller-side form sends the authenticated seller's workspace, local product key, display name, description, and private Storage object path. The Edge Function independently verifies the seller JWT and requires a matching active `stripe_products` row owned by that seller/workspace before updating the server-managed delivery fields. The bucket is fixed to `customer-deliveries`; the browser cannot choose a public bucket.
+
+Upload the file first to the private bucket, then configure the exact object path in Products & Sales. The matching Stripe product row must already exist. Product display names/descriptions are saved in the server catalog for use in buyer-facing order history. This form does not upload file bytes or create Stripe catalog entries.
