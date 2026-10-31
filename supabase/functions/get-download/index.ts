@@ -6,11 +6,11 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const db = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status, headers: { "content-type": "application/json", "cache-control": "no-store" },
-});
+const corsHeaders = { "access-control-allow-origin": "*", "access-control-allow-headers": "authorization, x-client-info, apikey, content-type", "access-control-allow-methods": "GET, POST, OPTIONS", "content-type": "application/json", "cache-control": "no-store" };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: corsHeaders });
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: "Delivery is not configured" }, 500);
   const auth = req.headers.get("authorization") ?? "";
