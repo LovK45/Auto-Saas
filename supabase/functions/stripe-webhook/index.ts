@@ -12,6 +12,87 @@ const db = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[char] ?? char));
+
+async function sendPurchaseConfirmation(input: {
+  sessionId: string;
+  email: string;
+  productName: string;
+  description: string;
+  amount: number;
+  currency: string;
+}) {
+  const { data: existing, error: lookupError } = await db.from("purchase_email_notifications")
+    .select("status").eq("stripe_checkout_session_id", input.sessionId).maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing?.status === "sent") return;
+
+  const { error: reserveError } = await db.from("purchase_email_notifications").upsert({
+    stripe_checkout_session_id: input.sessionId,
+    recipient_email: input.email,
+    product_name: input.productName,
+    status: "pending",
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "stripe_checkout_session_id", ignoreDuplicates: true });
+  if (reserveError) throw reserveError;
+
+  const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  const from = Deno.env.get("PURCHASE_EMAIL_FROM") ?? "";
+  const appUrl = Deno.env.get("APP_BASE_URL") ?? "";
+  if (!apiKey || !from || !appUrl) {
+    await db.from("purchase_email_notifications").update({
+      status: "pending",
+      last_error: "Email provider is not configured (RESEND_API_KEY, PURCHASE_EMAIL_FROM, APP_BASE_URL)",
+      updated_at: new Date().toISOString(),
+    }).eq("stripe_checkout_session_id", input.sessionId);
+    return;
+  }
+
+  const product = escapeHtml(input.productName);
+  const description = escapeHtml(input.description || "Your purchase is ready in your customer library.");
+  const amount = new Intl.NumberFormat("en-US", {
+    style: "currency", currency: input.currency.toUpperCase(),
+  }).format(input.amount / 100);
+  const safeAppUrl = escapeHtml(appUrl.replace(/\/$/, ""));
+  const html = `<!doctype html><html><body style="margin:0;padding:32px;background:#f5f6fa;font-family:Arial,sans-serif;color:#171923"><div style="max-width:560px;margin:auto;background:#fff;border-radius:16px;padding:32px"><h1 style="margin-top:0">Your purchase is confirmed</h1><p>Thank you for your purchase. Stripe has confirmed your payment.</p><h2>${product}</h2><p>${description}</p><p><strong>Paid:</strong> ${amount}</p><p>To access your purchase, sign in or create an account using this same email address:</p><p><a href="${safeAppUrl}" style="display:inline-block;padding:13px 20px;background:#5b4bdb;color:#fff;text-decoration:none;border-radius:8px">Open your customer library</a></p><p style="font-size:13px;color:#666">If you have not created an account yet, register with the email address that received this message. Your available purchases will appear in the library after sign-in.</p></div></body></html>`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${apiKey}`,
+      "content-type": "application/json",
+      "idempotency-key": `purchase-confirmation-${input.sessionId}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [input.email],
+      subject: `Purchase confirmed: ${input.productName}`,
+      html,
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    await db.from("purchase_email_notifications").update({
+      status: "failed",
+      last_error: `Resend request failed (${response.status})`,
+      updated_at: new Date().toISOString(),
+    }).eq("stripe_checkout_session_id", input.sessionId);
+    console.error("Purchase confirmation email failed", response.status, result);
+    return;
+  }
+  const { error: sentError } = await db.from("purchase_email_notifications").update({
+    status: "sent",
+    provider_message_id: typeof result.id === "string" ? result.id : null,
+    last_error: null,
+    sent_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq("stripe_checkout_session_id", input.sessionId);
+  if (sentError) throw sentError;
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -122,6 +203,18 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }, { onConflict: "stripe_checkout_session_id" });
         if (entitlementError) throw entitlementError;
+      }
+
+      // Notify only after Stripe confirms payment. Resend's idempotency key protects retries.
+      if (paymentStatus === "paid" && buyerEmail) {
+        await sendPurchaseConfirmation({
+          sessionId,
+          email: buyerEmail,
+          productName: deliveryProduct?.product_name ?? productKey,
+          description: deliveryProduct?.product_description ?? "",
+          amount,
+          currency: (session.currency ?? "usd").toLowerCase(),
+        });
       }
     } else if (event.type === "charge.refunded") {
       const charge = event.data.object as Stripe.Charge;
