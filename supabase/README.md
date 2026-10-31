@@ -80,3 +80,32 @@ The left feature navigation is independently scrollable on desktop and mobile; t
 ## Lead outcome tracking
 
 CRM users can manually mark a lead as converted or undo that mark. Conversion timestamps and the explicit `manual_lead_conversion` type are saved on the lead record, included in CSV exports and manual workspace snapshots, and shown as a separate count in the consented UTM attribution report. These marks are operator-entered lead outcomes only; they do not create purchase records, verify Stripe payments, add revenue, or alter campaign performance revenue/ROAS. The business timeline records conversion marks. New lead creation timestamps are recorded for timeline reporting.
+
+
+## Verified Stripe purchase ledger (Edge Function)
+
+The repository now includes a signed-webhook handler at `functions/stripe-webhook/index.ts` and an additive migration at `migrations/20261031_verified_stripe_purchases.sql`.
+
+### Required deployment sequence
+1. Apply the original `schema.sql` if it has not already been applied.
+2. Apply `migrations/20261031_verified_stripe_purchases.sql` in the Supabase SQL Editor.
+3. Deploy the Edge Function from this repository folder:
+   `supabase functions deploy stripe-webhook --no-verify-jwt`
+4. Set function secrets in Supabase (never in the frontend or GitHub Pages):
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+5. In Stripe test mode, create a webhook endpoint pointing to the deployed function URL. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, and `charge.refunded`. Copy the endpoint signing secret into `STRIPE_WEBHOOK_SECRET`.
+6. Send test events and verify rows/statuses in the Supabase database before switching any real payment flow on.
+
+### Checkout metadata contract
+A trusted checkout-creation endpoint must set these Stripe Checkout Session metadata fields: `owner_id`, `workspace_id`, and `product_key`. The webhook checks that the workspace belongs to the stated authenticated owner before recording a session. Do not let an untrusted browser choose arbitrary owner metadata; the checkout-creation endpoint must derive owner identity from the verified Supabase access token and validate workspace ownership. Existing manually pasted Stripe Payment Links are not automatically connected to this ledger and may not supply the required metadata.
+
+### Security and scope
+- The handler verifies the exact raw request body with Stripe's signature before reading event data.
+- Event IDs are reserved to prevent duplicate processing; failed processing releases the reservation so Stripe retries can be handled.
+- Purchase rows are written with the Supabase service-role key inside the Edge Function only. Browser roles retain owner-scoped read access and cannot write purchases.
+- Checkout sessions are recorded as paid only when Stripe reports `payment_status=paid`; asynchronous failures are recorded as failed. Refund events update the linked payment intent and refunded amount.
+- The current static app does not yet create trusted Checkout Sessions, display a live verified-sales dashboard, grant customer entitlements, or reconcile disputes/chargebacks. Do not treat a payment-link redirect, local conversion mark, or client-side flag as proof of payment.
+- Test the webhook and confirm owner/workspace isolation before production use. This code has been structurally reviewed here but not deployed against a live Supabase or Stripe account.
