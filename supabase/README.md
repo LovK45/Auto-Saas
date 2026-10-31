@@ -109,3 +109,17 @@ A trusted checkout-creation endpoint must set these Stripe Checkout Session meta
 - Checkout sessions are recorded as paid only when Stripe reports `payment_status=paid`; asynchronous failures are recorded as failed. Refund events update the linked payment intent and refunded amount.
 - The current static app does not yet create trusted Checkout Sessions, display a live verified-sales dashboard, grant customer entitlements, or reconcile disputes/chargebacks. Do not treat a payment-link redirect, local conversion mark, or client-side flag as proof of payment.
 - Test the webhook and confirm owner/workspace isolation before production use. This code has been structurally reviewed here but not deployed against a live Supabase or Stripe account.
+
+
+## Authenticated one-time Checkout creation
+
+A second Edge Function now lives at `functions/create-checkout/index.ts`. It requires a valid Supabase user session, confirms that the requested workspace belongs to that user, and looks up a server-managed Stripe Price ID. The browser cannot send an amount or redirect URL to override the configured price or return destination.
+
+### Additional setup
+1. Apply `migrations/20261031_stripe_product_catalog.sql` after the verified-purchases migration.
+2. Deploy with `supabase functions deploy create-checkout` (JWT verification remains enabled).
+3. Set Edge Function secrets: `STRIPE_SECRET_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `APP_BASE_URL` (the exact HTTPS origin of the deployed static app).
+4. Insert one `stripe_products` row per sellable item using the authenticated owner's workspace ID, a stable `product_key`, the Stripe Price ID created in Stripe Dashboard, and `active=true`. The table has no browser grants or policies; manage it through trusted admin tooling or the Supabase SQL Editor.
+5. The signed webhook described above must also be deployed and configured. Checkout metadata is populated by this function and validated again by the webhook.
+
+The frontend is not yet wired to call this function, and the static local product catalog does not provision Stripe Prices or rows in `stripe_products`. Do not assume checkout is available until the database migrations, secrets, Stripe Price records, both Edge Functions, and webhook endpoint are configured and tested in Stripe test mode. Do not switch to live mode until successful, failed, duplicate, and refund test cases have been verified.
