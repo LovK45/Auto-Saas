@@ -92,7 +92,7 @@ async function refreshSales(){
  status.textContent='Loading…';
  try{
   const workspaceId=await ensureSalesWorkspace();
-  $('salesWorkspace').innerHTML='Workspace ID: <code>'+esc(workspaceId)+'</code> · Owner ID: <code>'+esc(activeUser.id)+'</code>';
+  $('salesWorkspace').innerHTML='Workspace ID: <code>'+esc(workspaceId)+'</code> · Owner ID: <code>'+esc(activeUser.id)+'</code>';if($('deliveryWorkspace'))$('deliveryWorkspace').value=workspaceId;
   const {data,error}=await sb.from('purchases').select('id,stripe_checkout_session_id,stripe_payment_intent_id,product_key,customer_email,amount_total,amount_refunded,currency,payment_status,created_at,paid_at,refunded_at').eq('owner_id',activeUser.id).order('created_at',{ascending:false}).limit(250);
   if(error)throw error;
   const rows=data||[],paid=rows.filter(x=>x.payment_status==='paid'||x.payment_status==='partially_refunded'||x.payment_status==='refunded');
@@ -140,7 +140,7 @@ async function refreshCustomerLibrary(){
   listEl.innerHTML=rows.map(p=>{
    const date=p.paid_at||p.created_at,amount=moneyMinor(Number(p.amount_total||0),p.currency||'usd');
    const canDownload=p.entitlement_status==='active'&&p.payment_status==='paid';
-   return '<div class="stackitem"><div><b>Product '+esc(p.product_key)+'</b><small>'+esc(amount)+' · '+esc(p.payment_status)+' · '+esc(date?new Date(date).toLocaleDateString():'Date unavailable')+'</small><small>Access: '+esc(p.entitlement_status)+'</small></div><button '+(canDownload?'data-library-download="'+esc(p.checkout_session_id)+'"':'disabled')+'>'+(canDownload?'Download':'Unavailable')+'</button></div>';
+   return '<div class="stackitem"><div><b>'+esc(p.product_name||('Product '+p.product_key))+'</b><small>'+esc(p.product_description||'')+'</small><small>'+esc(amount)+' · '+esc(p.payment_status)+' · '+esc(date?new Date(date).toLocaleDateString():'Date unavailable')+'</small><small>Access: '+esc(p.entitlement_status)+'</small></div><button '+(canDownload?'data-library-download="'+esc(p.checkout_session_id)+'"':'disabled')+'>'+(canDownload?'Download':'Unavailable')+'</button></div>';
   }).join('');
  }catch(error){status.textContent=error?.message||'Could not load your library.';listEl.className='list empty';listEl.textContent='Purchase history could not be loaded.'}
 }
