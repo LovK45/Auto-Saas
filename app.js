@@ -198,7 +198,7 @@ $('getDelivery').onclick=async()=>{
 const returnedSession=new URLSearchParams(location.search).get('session_id');
 if(returnedSession&&$('deliverySessionId'))$('deliverySessionId').value=returnedSession;
 const checkoutResult=new URLSearchParams(location.search).get('checkout');
-if(checkoutResult==='success')note('Checkout returned successfully. Sign in with your purchase email and verify access below.');
+if(checkoutResult==='success'){go('products');note('Checkout returned. Payment verification is handled securely; sign in with your purchase email and refresh your library.');if(sb&&activeUser){refreshSales();refreshCustomerLibrary();refreshPurchaseEmails()}}
 else if(checkoutResult==='cancelled')note('Checkout was cancelled. No purchase access was granted.');
 
 function renderCommerce(){
@@ -218,7 +218,7 @@ renderCommerce();
 
 $('cloudUpload').onclick=async()=>{if(!sb||!activeUser)return note('Sign in before creating a cloud backup.');const payload={campaigns:s.campaigns,leads:s.leads,drafts:s.drafts,partners:s.partners,funnels:s.funnels||[],products:s.products||[],sequences:s.sequences||[],workflows:s.workflows||[],workflowHistory:s.workflowHistory||[],calendar:s.calendar||[],tasks:s.tasks||[],notifications:s.notifications||[],activity:s.activity,clicks:s.clicks};const {error}=await sb.from('workspace_snapshots').upsert({owner_id:activeUser.id,payload,updated_at:new Date().toISOString()},{onConflict:'owner_id'});if(error)return note('Cloud backup failed: '+error.message);authMessage('Cloud backup updated for '+activeUser.email+'.');note('Workspace backup saved to Supabase.')};
 $('cloudRestore').onclick=async()=>{if(!sb||!activeUser)return note('Sign in before restoring a cloud backup.');if(!confirm('Replace this browser workspace with your latest cloud backup? Export local data first if needed.'))return;const {data,error}=await sb.from('workspace_snapshots').select('payload,updated_at').eq('owner_id',activeUser.id).maybeSingle();if(error)return note('Cloud restore failed: '+error.message);if(!data?.payload)return note('No cloud backup exists for this account yet.');const p=data.payload;s={...defaults,...p,settings:{...defaults.settings,...s.settings}};save();render();authMessage('Restored cloud backup from '+new Date(data.updated_at).toLocaleString()+'.');note('Cloud backup restored.')};
-if(sb)sb.auth.onAuthStateChange((_event,session)=>{activeUser=session?.user||null;activeWorkspaceId=null;if(activeUser){authMessage('Signed in as '+activeUser.email+'. Cloud backup is available.');if($('products').classList.contains('active'))refreshSales()}else{authMessage('Not signed in. Local workspace mode is active.');refreshSales()}});
+if(sb)sb.auth.onAuthStateChange((_event,session)=>{activeUser=session?.user||null;activeWorkspaceId=null;if(activeUser){authMessage('Signed in as '+activeUser.email+'. Cloud backup is available.');if($('products').classList.contains('active')){refreshSales();refreshCustomerLibrary();refreshPurchaseEmails()}}else{authMessage('Not signed in. Local workspace mode is active.');refreshSales()}});
 
 /* Unified timeline is derived from existing records; it does not duplicate storage. */
 function renderTimeline(){
