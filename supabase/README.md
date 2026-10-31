@@ -58,3 +58,8 @@ Enabled workflows now listen to two supported browser-local events: creation of 
 - The Content Calendar stores planned content with title, date, platform, content type and a caption/production brief.
 - Entries can be filtered, marked published/reopened, copied as text, deleted and exported as CSV. Published status is user-managed and is not verified against a social platform.
 - This module is a planning queue only. It does not publish, schedule posts with providers, upload media, or send email. Calendar data is included in manual workspace snapshots; no automatic cloud sync is implemented.
+
+
+## Unified business timeline
+
+The Business Timeline derives a chronological activity view from existing local activity records, lead creation timestamps, task creation/completion timestamps, content calendar creation timestamps, notifications and workflow history. It supports category filtering, text search and CSV export. It does not create a separate audit database, guarantee immutable audit history, or add events retroactively where source records lack timestamps. It remains browser-local and is included in the existing manual workspace snapshot through its source records.
