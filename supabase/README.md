@@ -51,3 +51,10 @@ Enabled workflows now listen to two supported browser-local events: creation of 
 - The notification inbox supports unread counts, mark-one-read, mark-all-read and clearing read or individual alerts.
 - Tasks and notifications created by enabled local workflow actions appear in these views. Records remain browser-local and are included in manual workspace snapshots; they are not cross-device synchronized except through manual snapshot backup/restore.
 - Due-date overdue counts use the browser's current date. No background reminders or push notifications are scheduled.
+
+
+## Content calendar
+
+- The Content Calendar stores planned content with title, date, platform, content type and a caption/production brief.
+- Entries can be filtered, marked published/reopened, copied as text, deleted and exported as CSV. Published status is user-managed and is not verified against a social platform.
+- This module is a planning queue only. It does not publish, schedule posts with providers, upload media, or send email. Calendar data is included in manual workspace snapshots; no automatic cloud sync is implemented.
