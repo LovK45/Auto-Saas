@@ -1,0 +1,25 @@
+name: Validate Autopilot
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate application files
+        run: |
+          test -s index.html
+          test -s styles.css
+          test -s app.js
+          grep -q 'id="overview"' index.html
+          grep -q 'id="studio"' index.html
+          grep -q 'id="leads"' index.html
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Check sitemap XML
+        run: python -c "import xml.etree.ElementTree as E; E.parse('sitemap.xml')"
