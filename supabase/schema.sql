@@ -20,3 +20,16 @@ create policy "partner owner access" on public.partner_links for all to authenti
 create policy "purchase owner read" on public.purchases for select to authenticated using(owner_id=auth.uid());
 revoke all on public.purchases from anon, authenticated;
 grant select on public.purchases to authenticated;
+
+
+-- One private JSON snapshot per authenticated user for cross-device workspace backup.
+create table if not exists public.workspace_snapshots (
+  owner_id uuid primary key references auth.users(id) on delete cascade,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.workspace_snapshots enable row level security;
+drop policy if exists "snapshot owner access" on public.workspace_snapshots;
+create policy "snapshot owner access" on public.workspace_snapshots for all to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+grant select, insert, update, delete on public.workspace_snapshots to authenticated;
