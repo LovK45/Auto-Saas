@@ -12,13 +12,13 @@ This repository's frontend is hosted as static files. The schema in `schema.sql`
 The tables use Supabase Row Level Security and `auth.uid()` owner checks. Purchases are readable by their owner, but the browser must not be allowed to write purchase rows. A verified Stripe webhook should be the only writer. Do not grant access based on a checkout success URL or a client-side flag.
 
 ## Frontend authentication status
-The Connections screen loads the Supabase JS v2 browser client and supports email/password account creation and sign-in. The public anon key is intended for browser use with correctly configured Row Level Security. Configure the deployed site URL and email-confirmation redirect URLs in Supabase Auth. If email confirmation is enabled, users must confirm before signing in. The app reports connection/session state but does not claim cloud synchronization.
+The Connections screen loads the Supabase JS v2 browser client and supports email/password account creation and sign-in. The public anon key is intended for browser use with correctly configured Row Level Security. Configure the deployed site URL and email-confirmation redirect URLs in Supabase Auth. If email confirmation is enabled, users must confirm before signing in. The app reports connection/session state and provides explicit backup/restore actions. Routine edits are not automatically synchronized.
 
 ## Still required before production
 - Deploy authenticated Edge Functions for AI generation and checkout creation.
 - Deploy a Stripe webhook that verifies the raw request signature and records paid sessions idempotently.
 - Supabase email/password sign-up, sign-in, session persistence and sign-out controls are now present in the frontend. Configure the project URL and public anon key in Connections.
-- Database CRUD/cloud sync is not yet connected; campaigns, leads, drafts and partner links still use browser localStorage. Do not treat authentication alone as cloud backup.
+- The Connections screen now offers explicit cloud backup and restore using `workspace_snapshots`. The snapshot is private to the signed-in user through RLS. Back up local records manually; restore replaces the current browser records after confirmation. Routine CRUD still runs locally between backups, so this is manual snapshot sync rather than live multi-device synchronization.
 - Add per-user AI quotas, request throttling, spend limits, monitoring, backups, and abuse protection.
 - Add an email delivery provider and social publishing APIs only after consent, unsubscribe, account authorization, and provider review flows are implemented.
 
