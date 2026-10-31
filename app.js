@@ -87,6 +87,32 @@ async function ensureSalesWorkspace(){
 }
 function moneyMinor(amount,currency){const code=(currency||'usd').toUpperCase();return new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'code'}).format((Number(amount)||0)/100)}
 function moneyByCurrency(rows,field){const totals=new Map();rows.forEach(row=>{const code=(row.currency||'usd').toUpperCase();totals.set(code,(totals.get(code)||0)+Number(row[field]||0))});return totals.size?[...totals].sort((a,b)=>a[0].localeCompare(b[0])).map(([code,total])=>moneyMinor(total,code)).join(' · '):moneyMinor(0,'usd')}
+
+async function refreshPurchaseEmails(){
+ const status=$('purchaseEmailStatus'),list=$('purchaseEmailList');
+ if(!sb||!activeUser){status.textContent='Sign in required';list.textContent='Sign in to view email delivery status.';return}
+ status.textContent='Loading…';
+ try{
+  const {data,error}=await sb.functions.invoke('manage-purchase-emails',{body:{action:'list'}});
+  if(error)throw error;
+  const rows=data?.notifications||[];
+  list.className='list'+(rows.length?'':' empty');
+  list.innerHTML=rows.length?rows.map(x=>'<div class="stackitem"><div><b>'+esc(x.product_name)+'</b><small>'+esc(x.recipient_email)+' · '+esc(x.status)+'</small><small>Attempts: '+Number(x.attempt_count||0)+' · '+esc(x.last_attempt_at?new Date(x.last_attempt_at).toLocaleString():'Not attempted')+'</small>'+(x.last_error?'<small>'+esc(x.last_error)+'</small>':'')+'<small>Session: '+esc(x.stripe_checkout_session_id)+'</small></div>'+(x.status==='sent'?'<span class="tag">Sent</span>':'<button class="secondary" data-retry-purchase-email="'+esc(x.stripe_checkout_session_id)+'">Retry email</button>')+'</div>').join(''):'No buyer confirmation emails have been recorded yet.';
+  status.textContent=rows.length+' notification records';
+ }catch(error){status.textContent='Could not load email status';list.textContent=error?.message||'Deploy manage-purchase-emails and apply its migration.'}
+}
+$('refreshPurchaseEmails').onclick=refreshPurchaseEmails;
+$('purchaseEmailList').onclick=async event=>{
+ const button=event.target.closest('[data-retry-purchase-email]');if(!button)return;
+ button.disabled=true;button.textContent='Sending…';
+ try{
+  const {data,error}=await sb.functions.invoke('manage-purchase-emails',{body:{action:'retry',sessionId:button.dataset.retryPurchaseEmail}});
+  if(error)throw error;
+  if(data?.sent){note('Purchase confirmation email sent.');await refreshPurchaseEmails()}
+  else throw new Error(data?.error||'Email retry failed');
+ }catch(error){note(error?.message||'Could not retry email.');button.disabled=false;button.textContent='Retry email'}
+};
+
 async function refreshSales(){
  const status=$('salesStatus');
  if(!sb||!activeUser){status.textContent='Sign in required';$('purchaseList').className='list empty';$('purchaseList').textContent='Connect Supabase and sign in to see verified purchase records.';$('salesOrders').textContent=$('salesGross').textContent=$('salesRefunded').textContent=$('salesNet').textContent='—';$('salesWorkspace').textContent='Your secure workspace ID appears after you sign in and refresh sales.';return}
@@ -107,6 +133,7 @@ async function refreshSales(){
   $('purchaseList').className='list'+(rows.length?'':' empty');
   $('purchaseList').innerHTML=rows.length?rows.map(x=>'<div class="stackitem"><div><b>'+esc(x.customer_email||'Customer email unavailable')+'</b><small>'+esc(x.product_key)+' · '+esc(x.payment_status.replace(/_/g,' '))+'</small><small>'+moneyMinor(x.amount_total,x.currency)+' gross · '+moneyMinor(x.amount_refunded,x.currency)+' refunded · '+esc(new Date(x.paid_at||x.created_at).toLocaleString())+'</small><small>Session: '+esc(x.stripe_checkout_session_id)+'</small></div><span class="tag">'+esc(x.payment_status)+'</span></div>').join(''):'No Stripe purchase events have been recorded yet.';
   status.textContent='Updated · '+rows.length+' records';
+  refreshPurchaseEmails();
  }catch(error){status.textContent='Could not load';$('purchaseList').className='list empty';$('purchaseList').textContent='Sales could not be loaded: '+(error?.message||'Unknown error')+' · Apply both Stripe migrations and confirm the purchases owner-read policy.';note('Verified sales could not be refreshed.')}
 }
 
