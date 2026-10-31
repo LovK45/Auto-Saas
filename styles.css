@@ -18,3 +18,9 @@
 
 /* Independently scrollable feature navigation */
 .sidebar{overflow:hidden}.sidebar nav{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#746b98 #171727;padding:0 5px 10px 0;margin-right:-5px}.sidebar nav::-webkit-scrollbar{width:7px}.sidebar nav::-webkit-scrollbar-track{background:#171727;border-radius:8px}.sidebar nav::-webkit-scrollbar-thumb{background:#746b98;border-radius:8px}.sidebar nav button{flex:0 0 auto}.sidebar>.eyebrow{flex:0 0 auto}.brand{flex:0 0 auto}.side-foot{flex:0 0 auto}
+
+.sales-metrics{margin:16px 0 20px}
+.setup-steps{padding-left:20px;color:var(--muted);line-height:1.8}
+.stackitem code,.notice code{overflow-wrap:anywhere;font-size:11px}
+.stackitem [data-checkout-product]{margin-top:9px}
+@media(max-width:740px){.sales-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sales-metrics article strong{font-size:22px}}
