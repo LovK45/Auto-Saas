@@ -30,3 +30,11 @@ No provider is live merely because this folder exists. Use Stripe test mode and 
 - The browser-local CRM supports contact search, status filtering, tag filtering, editable status/tags/internal notes, and CSV export of those fields.
 - The sequence planner saves a trigger label and up to two drafted email steps with a configured delay. It is a planning tool only: there is no enrollment engine, scheduler, delivery provider, unsubscribe processor, or send tracking yet.
 - CRM records and sequence plans are included in manual workspace snapshot backups. This is not automatic row-level cloud sync.
+
+
+## Visual automation designer scope
+
+- Workflow definitions are stored in the browser workspace with a trigger label, optional contact condition, ordered action steps, and optional per-step delay metadata.
+- Users can mark a workflow as ready or pause it. This is a local readiness flag only; it does not register a server-side trigger or execute actions.
+- The test bench evaluates the selected contact condition locally and writes an explicitly labelled simulation record. It does not modify contacts, send email, create tasks, wait for delays, or call external services.
+- Workflow definitions and simulation history are included in manual workspace snapshots. A production execution service still needs authenticated server-side event intake, durable job storage, a scheduler/queue, idempotency, retry handling, audit logs and provider integrations.
