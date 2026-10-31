@@ -109,6 +109,26 @@ async function refreshSales(){
  }catch(error){status.textContent='Could not load';$('purchaseList').className='list empty';$('purchaseList').textContent='Sales could not be loaded: '+(error?.message||'Unknown error')+' · Apply both Stripe migrations and confirm the purchases owner-read policy.';note('Verified sales could not be refreshed.')}
 }
 $('refreshSales').onclick=refreshSales;
+$('getDelivery').onclick=async()=>{
+ const sessionId=$('deliverySessionId').value.trim();
+ if(!sb||!activeUser)return note('Sign in with the purchasing email first.');
+ if(!sessionId)return note('Enter the Checkout Session ID from your return URL.');
+ const btn=$('getDelivery'),status=$('deliveryStatus');btn.disabled=true;status.textContent='Checking purchase…';
+ try{
+  const {data,error}=await sb.functions.invoke('get-download',{body:{checkout_session_id:sessionId}});
+  if(error)throw error;
+  if(!data?.download_url)throw new Error(data?.error||'No download link returned.');
+  status.textContent='Purchase verified. Your private download link expires in 90 seconds.';
+  window.open(data.download_url,'_blank','noopener');
+ }catch(error){status.textContent=error?.message||'Unable to verify this purchase.';note('Download access could not be verified.')}
+ finally{btn.disabled=false}
+};
+const returnedSession=new URLSearchParams(location.search).get('session_id');
+if(returnedSession&&$('deliverySessionId'))$('deliverySessionId').value=returnedSession;
+const checkoutResult=new URLSearchParams(location.search).get('checkout');
+if(checkoutResult==='success')note('Checkout returned successfully. Sign in with your purchase email and verify access below.');
+else if(checkoutResult==='cancelled')note('Checkout was cancelled. No purchase access was granted.');
+
 function renderCommerce(){list('funnelList',s.funnels||[],'No funnel plans yet.',f=>'<div class="stackitem"><div><b>'+esc(f.name)+'</b><small>'+esc(f.type)+' · '+esc(f.offer)+' · '+esc(f.audience)+'</small><small><a href="'+esc(f.url)+'" target="_blank" rel="noopener">Open CTA destination ↗</a></small></div><button data-del-funnel="'+f.id+'" aria-label="Delete funnel">✕</button></div>');list('productList',s.products||[],'No products added yet.',p=>'<div class="stackitem"><div><b>'+esc(p.name)+'</b><small>'+esc(p.currency)+' '+Number(p.price).toFixed(2)+' · '+esc(p.description)+'</small><small>Checkout product key: <code>'+esc(String(p.id))+'</code></small>'+(p.paymentUrl?'<small><a href="'+esc(p.paymentUrl)+'" target="_blank" rel="noopener">Open external payment link ↗</a></small>':'<small>No external payment link attached</small>')+'<button class="secondary" data-checkout-product="'+esc(p.id)+'">Create secure checkout ↗</button></div><button data-del-product="'+p.id+'" aria-label="Delete product">✕</button></div>')}
 $('createFunnel').onclick=()=>{const name=$('fName').value.trim(),offer=$('fOffer').value.trim(),url=$('fUrl').value.trim();if(!name||!offer||!url)return note('Enter a funnel name, offer and CTA destination.');try{if(new URL(url).protocol!=='https:')throw 0}catch{return note('Use a valid HTTPS CTA destination.')}s.funnels=s.funnels||[];s.funnels.unshift({id:Date.now(),name,offer,audience:$('fAudience').value.trim(),url,type:$('fType').value,createdAt:new Date().toISOString()});save();renderCommerce();log('Created funnel plan: '+name);$('fName').value='';$('fOffer').value='';$('fUrl').value='';note('Funnel plan saved.')};
 $('funnelList').onclick=e=>{const b=e.target.closest('[data-del-funnel]');if(b){s.funnels=s.funnels.filter(x=>String(x.id)!==b.dataset.delFunnel);save();renderCommerce();log('Deleted funnel plan')}};
