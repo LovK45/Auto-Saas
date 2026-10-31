@@ -35,3 +35,8 @@
 .customer-delivery label{display:block;margin:12px 0}
 .customer-delivery input{width:100%;margin-top:6px}
 @media(max-width:560px){.customer-library .panel-head{flex-direction:column}.customer-library .stackitem{align-items:flex-start;flex-direction:column}.customer-library .stackitem button{width:100%}}
+
+.delivery-manager{margin-top:16px}
+.delivery-manager .stackitem{display:block}
+.delivery-manager label{display:block;margin:10px 0}
+.delivery-manager input{width:100%;margin-top:5px}
