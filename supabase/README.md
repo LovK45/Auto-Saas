@@ -38,3 +38,8 @@ No provider is live merely because this folder exists. Use Stripe test mode and 
 - Users can mark a workflow as ready or pause it. This is a local readiness flag only; it does not register a server-side trigger or execute actions.
 - The test bench evaluates the selected contact condition locally and writes an explicitly labelled simulation record. It does not modify contacts, send email, create tasks, wait for delays, or call external services.
 - Workflow definitions and simulation history are included in manual workspace snapshots. A production execution service still needs authenticated server-side event intake, durable job storage, a scheduler/queue, idempotency, retry handling, audit logs and provider integrations.
+
+
+## Local workflow event bridge
+
+Enabled workflows now listen to two supported browser-local events: creation of a permission-confirmed lead and addition of a contact tag. Conditions are evaluated against that contact. Zero-delay actions can add a contact tag, create a local follow-up task, create a local email draft, record workspace activity, or create a local admin notification. These actions run only in the active browser session and are not a distributed automation service. Steps with a configured delay are recorded as pending and are not executed because there is no scheduler. Purchase and campaign triggers remain design-only until trusted server-side event sources are integrated. The browser must not be treated as a secure source of payment events.
