@@ -123,3 +123,10 @@ A second Edge Function now lives at `functions/create-checkout/index.ts`. It req
 5. The signed webhook described above must also be deployed and configured. Checkout metadata is populated by this function and validated again by the webhook.
 
 The frontend is not yet wired to call this function, and the static local product catalog does not provision Stripe Prices or rows in `stripe_products`. Do not assume checkout is available until the database migrations, secrets, Stripe Price records, both Edge Functions, and webhook endpoint are configured and tested in Stripe test mode. Do not switch to live mode until successful, failed, duplicate, and refund test cases have been verified.
+
+
+## Verified sales dashboard and checkout UI
+
+The Products & Sales screen now loads the authenticated owner's purchase ledger from Supabase after sign-in and refresh. It displays verified paid order count, gross amount, refunded amount, net paid amount, and the latest 250 purchase records with customer email, product key, payment state, amounts, and timestamps. Totals are grouped by currency rather than incorrectly adding unlike currencies together.
+
+The screen can create the owner's first workspace if needed, display the workspace/owner IDs for trusted product-catalog setup, and invoke the authenticated `create-checkout` Edge Function for a local catalog item. The local item's numeric ID is used as its `product_key`; a matching active `stripe_products` row and Stripe Price ID must be inserted by an administrator. Checkout remains unavailable until both functions, both migrations, secrets, and Stripe webhook configuration are deployed. The dashboard is not live until Supabase is configured and the user signs in. No customer entitlement or digital delivery is automatically provisioned.
