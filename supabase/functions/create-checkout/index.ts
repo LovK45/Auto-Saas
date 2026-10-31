@@ -73,8 +73,7 @@ Deno.serve(async (req: Request) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: product.stripe_price_id, quantity: 1 }],
-      customer_email: user.email ?? undefined,
-      client_reference_id: user.id,
+      // The buyer is not the authenticated seller. Stripe Checkout collects the buyer email.
       metadata: { owner_id: user.id, workspace_id: workspaceId, product_key: productKey },
       success_url: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?checkout=cancelled`,
