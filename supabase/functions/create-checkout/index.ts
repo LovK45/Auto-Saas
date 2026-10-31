@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
       line_items: [{ price: product.stripe_price_id, quantity: 1 }],
       // The buyer is not the authenticated seller. Stripe Checkout collects the buyer email.
       metadata: { owner_id: user.id, workspace_id: workspaceId, product_key: productKey },
-      success_url: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/checkout-success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/?checkout=cancelled`,
     });
     if (!session.url) return response({ error: "Stripe did not return a checkout URL" }, 502, origin);
