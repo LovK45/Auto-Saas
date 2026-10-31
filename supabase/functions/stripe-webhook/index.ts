@@ -82,13 +82,14 @@ Deno.serve(async (req: Request) => {
       const amount = Number(session.amount_total ?? 0);
       if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Invalid checkout amount");
 
+      const buyerEmail = (session.customer_details?.email ?? session.customer_email ?? "").trim().toLowerCase();
       const { error } = await db.from("purchases").upsert({
         owner_id: ownerId,
         workspace_id: workspaceId,
         stripe_checkout_session_id: sessionId,
         stripe_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null,
         stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
-        customer_email: session.customer_details?.email ?? session.customer_email ?? null,
+        customer_email: buyerEmail || null,
         product_key: productKey,
         amount_total: amount,
         amount_refunded: 0,
@@ -98,6 +99,28 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       }, { onConflict: "stripe_checkout_session_id" });
       if (error) throw error;
+
+      // Create/revoke delivery entitlement only for a paid session with a verified buyer email
+      // and an explicitly configured private Storage object on the server-managed product record.
+      const { data: deliveryProduct, error: deliveryLookupError } = await db.from("stripe_products")
+        .select("delivery_bucket, delivery_path")
+        .eq("workspace_id", workspaceId).eq("owner_id", ownerId).eq("product_key", productKey)
+        .eq("active", true).maybeSingle();
+      if (deliveryLookupError) throw deliveryLookupError;
+      if (buyerEmail && deliveryProduct?.delivery_bucket && deliveryProduct?.delivery_path) {
+        const { error: entitlementError } = await db.from("purchase_entitlements").upsert({
+          stripe_checkout_session_id: sessionId,
+          owner_id: ownerId,
+          workspace_id: workspaceId,
+          product_key: productKey,
+          customer_email: buyerEmail,
+          storage_bucket: deliveryProduct.delivery_bucket,
+          storage_path: deliveryProduct.delivery_path,
+          entitlement_status: paymentStatus === "paid" ? "active" : "inactive",
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "stripe_checkout_session_id" });
+        if (entitlementError) throw entitlementError;
+      }
     } else if (event.type === "charge.refunded") {
       const charge = event.data.object as Stripe.Charge;
       const paymentIntentId = typeof charge.payment_intent === "string"
@@ -110,6 +133,16 @@ Deno.serve(async (req: Request) => {
           updated_at: new Date().toISOString(),
         }).eq("stripe_payment_intent_id", paymentIntentId);
         if (error) throw error;
+        const { data: purchase, error: purchaseLookupError } = await db.from("purchases")
+          .select("stripe_checkout_session_id").eq("stripe_payment_intent_id", paymentIntentId).maybeSingle();
+        if (purchaseLookupError) throw purchaseLookupError;
+        if (purchase) {
+          const { error: entitlementError } = await db.from("purchase_entitlements").update({
+            entitlement_status: charge.refunded ? "revoked" : "inactive",
+            updated_at: new Date().toISOString(),
+          }).eq("stripe_checkout_session_id", purchase.stripe_checkout_session_id);
+          if (entitlementError) throw entitlementError;
+        }
       }
     }
 
