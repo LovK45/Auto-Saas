@@ -22,6 +22,8 @@ async function sendPurchaseConfirmation(input: {
   email: string;
   productName: string;
   description: string;
+  ownerId: string;
+  workspaceId: string;
   amount: number;
   currency: string;
 }) {
@@ -33,6 +35,8 @@ async function sendPurchaseConfirmation(input: {
   const { error: reserveError } = await db.from("purchase_email_notifications").upsert({
     stripe_checkout_session_id: input.sessionId,
     recipient_email: input.email,
+    owner_id: input.ownerId,
+    workspace_id: input.workspaceId,
     product_name: input.productName,
     status: "pending",
     updated_at: new Date().toISOString(),
@@ -211,6 +215,8 @@ Deno.serve(async (req: Request) => {
           sessionId,
           email: buyerEmail,
           productName: deliveryProduct?.product_name ?? productKey,
+          ownerId,
+          workspaceId,
           description: deliveryProduct?.product_description ?? "",
           amount,
           currency: (session.currency ?? "usd").toLowerCase(),
